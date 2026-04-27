@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- User Profile ---
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) 
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'favorites', 'vehicle_number', 'theme']);
+      
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email'])
+          && data.uid == request.auth.uid
+          && data.email is string
+          && (data.get('name', '') is string)
+          && (data.get('vehicle_number', '') is string);
+      }
+    }
+
+    // --- Parking Spots ---
+    match /parking_spots/{spotId} {
+      allow get, list: if isSignedIn();
+      // Allow crowd-sourced updates for availability
+      allow update: if isSignedIn() && isValidId(spotId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['available_spots', 'last_updated'])
+        && incoming().available_spots is int
+        && incoming().available_spots >= 0
+        && incoming().available_spots <= existing().total_spots;
+      
+      // Admin only create/delete (using the provided dev email as bootstrap admin)
+      allow create, delete: if isSignedIn() && request.auth.token.email == "devshree.apsit.cloud@gmail.com";
+    }
+
+    // --- Bookings ---
+    match /bookings/{bookingId} {
+      allow get: if isOwner(existing().user_id);
+      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn() && isOwner(incoming().user_id) && isValidBooking(incoming());
+      allow update: if isOwner(existing().user_id) && isValidBooking(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'end_time']);
+
+      function isValidBooking(data) {
+        return data.keys().hasAll(['user_id', 'parking_id', 'start_time', 'end_time', 'total_price', 'status'])
+          && data.user_id == request.auth.uid
+          && data.status in ['pending', 'active', 'completed', 'cancelled']
+          && data.total_price is number;
+      }
+    }
+  }
+}

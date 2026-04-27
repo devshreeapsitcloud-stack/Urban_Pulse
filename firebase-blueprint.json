@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "favorites": { "type": "array", "items": { "type": "string" } },
+        "vehicle_number": { "type": "string" },
+        "theme": { "type": "string", "enum": ["light", "dark"] }
+      },
+      "required": ["uid", "email"]
+    },
+    "ParkingSpot": {
+      "title": "Parking Spot",
+      "description": "Information about a parking facility",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "object", "description": "GeoPoint format with lat and lng" },
+        "total_spots": { "type": "number" },
+        "available_spots": { "type": "number" },
+        "price_per_hour": { "type": "number" },
+        "type": { "type": "string", "enum": ["Street", "Garage", "Private"] },
+        "amenities": { "type": "array", "items": { "type": "string" } },
+        "rating": { "type": "number" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "last_updated": { "type": "string", "format": "date-time" },
+        "happy_hour": {
+          "type": "object",
+          "properties": {
+            "start_hour": { "type": "number" },
+            "end_hour": { "type": "number" },
+            "discount_multiplier": { "type": "number" }
+          }
+        }
+      },
+      "required": ["name", "location", "total_spots", "available_spots", "price_per_hour"]
+    },
+    "Booking": {
+      "title": "Parking Booking",
+      "description": "Record of a parking reservation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "parking_id": { "type": "string" },
+        "start_time": { "type": "string", "format": "date-time" },
+        "end_time": { "type": "string", "format": "date-time" },
+        "total_price": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "active", "completed", "cancelled"] }
+      },
+      "required": ["user_id", "parking_id", "start_time", "end_time", "total_price", "status"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles by UID"
+    },
+    "parking_spots/{spotId}": {
+      "schema": "ParkingSpot",
+      "description": "Parking locations and availability"
+    },
+    "bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "User bookings"
+    }
+  }
+}

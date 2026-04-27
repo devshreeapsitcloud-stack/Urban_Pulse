@@ -1,0 +1,6 @@
+{
+  "name": "Urban Pulse",
+  "description": "A real-time smart parking app that helps users find, reserve, and navigate to parking spots nearby.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}
